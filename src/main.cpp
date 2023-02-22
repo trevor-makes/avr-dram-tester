@@ -5,14 +5,14 @@
 
 // Insert N cycle delay
 template <uint8_t N = 1>
-void nop() {
+void delay() {
   __asm__ __volatile__ ("nop");
-  nop<N - 1>();
+  delay<N - 1>();
 }
 
 // Base case of recursive template
 template <>
-inline void nop<0>() {}
+inline void delay<0>() {}
 
 // Return high byte of address
 constexpr uint8_t row(uint16_t address) {
@@ -126,7 +126,7 @@ void read(uint16_t address) {
   PORTD = col(address);
   PORTC = CTRL_READ_COL;
   // Delay 2 for tCAC > 120ns, +1 for AVR read latency
-  nop<3>();
+  delay<3>();
   // Validate data is expected value
   if ((PINB & DOUT) != READ) {
     // Block forever with red LED
@@ -145,7 +145,7 @@ void write(uint16_t address) {
   PORTD = col(address);
   PORTC = CTRL_WRITE_COL;
   // Delay for tCAS > 120 (OUT + NOP)
-  nop();
+  delay();
   // Reset control signals
   PORTC = CTRL_DEFAULT;
 }
