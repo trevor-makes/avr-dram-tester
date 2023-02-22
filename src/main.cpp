@@ -60,6 +60,8 @@ constexpr uint8_t CTRL_WRITE_ROW = CAS; // pull RAS and WE low
 constexpr uint8_t CTRL_WRITE_COL = 0; // pull RAS, CAS, WE low
 
 enum class Direction { UP, DOWN };
+enum class Read { R0 = 0, R1 = DOUT, Rx };
+enum class Write { W0, W1, Wx };
 
 // Insert N cycle delay
 template <uint8_t N = 1>
@@ -107,7 +109,8 @@ void fail() {
   block();
 }
 
-template <uint8_t EXPECTED>
+// TODO take template param for tCAC delay cycles
+template <Read READ>
 void read(uint16_t address) {
   // Strobe row address
   PORTD = row(address);
@@ -118,16 +121,15 @@ void read(uint16_t address) {
   // Delay 2 for tCAC > 120ns, 1 for AVR read latency
   nop<3>();
   // Validate data is expected value
-  static_assert(DOUT == 1, "DOUT assumed to be pin B0");
-  if ((PINB & DOUT) != EXPECTED) {
+  if ((PINB & DOUT) != (uint8_t)READ) {
     // Block forever with red LED
+    // TODO jump/return for next attempt w/ longer delay
     fail();
   }
   // Reset control signals
   PORTC = CTRL_DEFAULT;
 }
 
-// TODO take template param for up/down?
 void write(uint16_t address) {
   // Strobe row address
   PORTD = row(address);
@@ -153,16 +155,13 @@ void refresh() {
   PORTC = CTRL_DEFAULT;
 }
 
-// TODO add separate param for write value
-// TODO add states for Wx and Rx -> one function instead of march_w, march_rw, march_r
-template <Direction DIR, uint8_t EXPECTED>
-void march_rw() {
+template <Direction DIR, Read READ, Write WRITE>
+void march() {
   // Data is same for all writes, so set Din outside of loop
-  // NOTE maybe set DIN high on R0,Wx pass so LED blinks 3rd time
-  if (EXPECTED) {
-    PORTB &= ~DIN;
-  } else {
-    PORTB |= DIN;
+  if (WRITE == Write::W0) {
+    PORTB &= ~DIN; // set data 0
+  } else { // W1, Wx
+    PORTB |= DIN; // set data 1
   }
 
   // Loop over full address range, up or down
@@ -171,8 +170,8 @@ void march_rw() {
   do {
     if (DIR == Direction::DOWN) --address;
 
-    read<EXPECTED>(address);
-    write(address);
+    if (READ != Read::Rx) read<READ>(address);
+    if (WRITE != Write::Wx) write(address);
     refresh();
 
     if (DIR == Direction::UP) ++address;
@@ -206,19 +205,21 @@ void test() {
 int main() {
   // Configure output pins
   DDRB = DIN | LED_G | LED_R; // outputs
-  PORTC = WE | CAS | RAS; // pull-ups first
-  DDRC = WE | CAS | RAS; // outputs, active-low
+  PORTC = CTRL_DEFAULT; // pull-ups first
+  DDRC = CTRL_DEFAULT; // outputs, active-low
   DDRD = 0xFF; // A0-A7 outputs
 
-  test();
+  //test();
 
   // March C- algorithm
-  // TODO march_w<UP, 0>(); or march<UP, W0> or march<UP, Rx, W0>
-  march_rw<Direction::UP, 0>(); // march<UP, R0, W1>
-  march_rw<Direction::UP, 1>(); // march<UP, R1, W0>
-  march_rw<Direction::DOWN, 0>(); // march<DOWN, R0, W1>
-  march_rw<Direction::DOWN, 1>(); // march<DOWN, R1, W0>
-  // TODO march_r<DOWN, 0> or march<DOWN, R0> or march<DOWN, R0, Wx>
+  // TODO remove enum class noise (Direction::, Read::, Write::)
+  // TODO add 2 param templates with auto Rx/Wx
+  march<Direction::UP, Read::Rx, Write::W0>();
+  march<Direction::UP, Read::R0, Write::W1>();
+  march<Direction::UP, Read::R1, Write::W0>();
+  march<Direction::DOWN, Read::R0, Write::W1>();
+  march<Direction::DOWN, Read::R1, Write::W0>();
+  march<Direction::DOWN, Read::R0, Write::Wx>();
 
   // Block forever with green LED
   pass();
