@@ -26,38 +26,6 @@ constexpr uint8_t col(uint16_t address) {
 
 #ifdef __AVR_ATmega328P__
 
-// Din-|B5 |USB| B4|-Grn LED
-//    -|   |___| B3|-Red LED
-//    -|         B2|-
-//    -|C0       B1|-
-//    -|C1       B0|-Dout
-//    -|C2       D7|-A7
-//  WE-|C3       D6|-A6
-// RAS-|C4       D5|-A5
-// CAS-|C5       D4|-A4
-//    -|         D3|-A3
-//    -|         D2|-A2
-//  5V-|5V      GND|-GND
-//    -|           |-
-// GND-|GND ...  D0|-A0
-//    -|    ...  D1|-A1
-//         Nano
-
-//  CAS ---\/----- A0
-//   A0 ---/\/---- A1
-//   A1 ----/\/--- A2
-//   A2 -----/\--- CAS
-
-// (A8) -|1 \/16|-GND
-//   Din-|2   15|-CAS
-//    WE-|3   14|-Dout
-//   RAS-|4   13|-A6
-//    A0-|5   12|-A3
-//    A2-|6   11|-A4
-//    A1-|7   10|-A5
-//    5V-|8    9|-A7
-//   4164 (4128/41256)
-
 // PORTB [ x x DIN LED_G LED_R - - DOUT ]
 // NOTE Din is also built-in LED; each march pass blinks LED
 constexpr uint8_t DIN = 1 << 5; // output
