@@ -1,3 +1,5 @@
+// Copyright (c) 2023 Trevor Makes
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -59,9 +61,9 @@ constexpr uint8_t CTRL_READ_COL = WE; // pull RAS and CAS low
 constexpr uint8_t CTRL_WRITE_ROW = CAS; // pull RAS and WE low
 constexpr uint8_t CTRL_WRITE_COL = 0; // pull RAS, CAS, WE low
 
-enum class Direction { UP, DOWN };
-enum class Read { R0 = 0, R1 = DOUT, Rx };
-enum class Write { W0, W1, Wx };
+enum Direction { UP, DN };
+enum Read { R0 = 0, R1 = DOUT, Rx };
+enum Write { W0, W1, Wx };
 
 // Insert N cycle delay
 template <uint8_t N = 1>
@@ -118,10 +120,10 @@ void read(uint16_t address) {
   // Strobe col address
   PORTD = col(address);
   PORTC = CTRL_READ_COL;
-  // Delay 2 for tCAC > 120ns, 1 for AVR read latency
+  // Delay 2 for tCAC > 120ns, +1 for AVR read latency
   nop<3>();
   // Validate data is expected value
-  if ((PINB & DOUT) != (uint8_t)READ) {
+  if ((PINB & DOUT) != READ) {
     // Block forever with red LED
     // TODO jump/return for next attempt w/ longer delay
     fail();
@@ -158,7 +160,7 @@ void refresh() {
 template <Direction DIR, Read READ, Write WRITE>
 void march() {
   // Data is same for all writes, so set Din outside of loop
-  if (WRITE == Write::W0) {
+  if (WRITE == W0) {
     PORTB &= ~DIN; // set data 0
   } else { // W1, Wx
     PORTB |= DIN; // set data 1
@@ -168,14 +170,26 @@ void march() {
   // TODO nested for loops for 9-bit row/col (41128/41256)
   uint16_t address = 0;
   do {
-    if (DIR == Direction::DOWN) --address;
+    if (DIR == DN) --address;
 
-    if (READ != Read::Rx) read<READ>(address);
-    if (WRITE != Write::Wx) write(address);
+    if (READ != Rx) read<READ>(address);
+    if (WRITE != Wx) write(address);
     refresh();
 
-    if (DIR == Direction::UP) ++address;
+    if (DIR == UP) ++address;
   } while (address != 0);
+}
+
+template <Direction DIR, Read READ>
+void march() {
+  // Default unpecified write to Wx
+  march<DIR, READ, Wx>();
+}
+
+template <Direction DIR, Write WRITE>
+void march() {
+  // Default unpecified read to Rx
+  march<DIR, Rx, WRITE>();
 }
 
 [[noreturn]]
@@ -212,14 +226,12 @@ int main() {
   //test();
 
   // March C- algorithm
-  // TODO remove enum class noise (Direction::, Read::, Write::)
-  // TODO add 2 param templates with auto Rx/Wx
-  march<Direction::UP, Read::Rx, Write::W0>();
-  march<Direction::UP, Read::R0, Write::W1>();
-  march<Direction::UP, Read::R1, Write::W0>();
-  march<Direction::DOWN, Read::R0, Write::W1>();
-  march<Direction::DOWN, Read::R1, Write::W0>();
-  march<Direction::DOWN, Read::R0, Write::Wx>();
+  march<UP, W0>();
+  march<UP, R0, W1>();
+  march<UP, R1, W0>();
+  march<DN, R0, W1>();
+  march<DN, R1, W0>();
+  march<DN, R0>();
 
   // Block forever with green LED
   pass();
