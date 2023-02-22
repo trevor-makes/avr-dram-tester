@@ -1,13 +1,30 @@
 // Copyright (c) 2023 Trevor Makes
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
-
 #include <stdint.h>
 
-#ifndef __AVR_ATmega328P__
-#error Port I/O hard-coded for ATmega328P
-#endif
+// Insert N cycle delay
+template <uint8_t N = 1>
+void nop() {
+  __asm__ __volatile__ ("nop");
+  nop<N - 1>();
+}
+
+// Base case of recursive template
+template <>
+inline void nop<0>() {}
+
+// Return high byte of address
+constexpr uint8_t row(uint16_t address) {
+  return address >> 8;
+}
+
+// Return low byte of address
+constexpr uint8_t col(uint16_t address) {
+  return address & 0xFF;
+}
+
+#ifdef __AVR_ATmega328P__
 
 // Din-|B5 |USB| B4|-Grn LED
 //    -|   |___| B3|-Red LED
@@ -41,14 +58,14 @@
 //    5V-|8    9|-A7
 //   4164 (4128/41256)
 
-// PORTB bits
+// PORTB [ x x DIN LED_G LED_R - - DOUT ]
 // NOTE Din is also built-in LED; each march pass blinks LED
 constexpr uint8_t DIN = 1 << 5; // output
 constexpr uint8_t LED_G = 1 << 4; // output
 constexpr uint8_t LED_R = 1 << 3; // output
 constexpr uint8_t DOUT = 1 << 0; // input
 
-// PORTC bits
+// PORTC [ x x CAS RAS WE - - - ]
 constexpr uint8_t WE = 1 << 3; // output, active-low
 constexpr uint8_t RAS = 1 << 4; // output, active-low
 constexpr uint8_t CAS = 1 << 5; // output, active-low
@@ -65,55 +82,35 @@ enum Direction { UP, DN };
 enum Read { R0 = 0, R1 = DOUT, Rx };
 enum Write { W0, W1, Wx };
 
-// Insert N cycle delay
-template <uint8_t N = 1>
-void nop() {
-  __asm__ __volatile__ ("nop");
-  nop<N - 1>();
-}
-
-// Base case of recursive template
-template <>
-inline void nop<0>() {}
-
-constexpr uint8_t row(uint16_t address) {
-  return address >> 8;
-}
-
-constexpr uint8_t col(uint16_t address) {
-  return address & 0xFF;
-}
-
+// Configure output pins
 void config() {
-  // Configure output pins
   DDRB = DIN | LED_G | LED_R; // outputs
   PORTC = CTRL_DEFAULT; // pull-ups first
   DDRC = CTRL_DEFAULT; // outputs, active-low
   DDRD = 0xFF; // A0-A7 outputs
 }
 
+// Float address and control, loop forever
 [[noreturn]]
 void block() {
-  // Disconnect address and control
   DDRC = 0;
   PORTC = 0;
   DDRD = 0;
   PORTD = 0;
-  // Loop forever
   for (;;) {}
 }
 
+// Set green LED, float I/O, loop forever
 [[noreturn]]
 void pass() {
-  // Set green LED, disconnect data
   PORTB = LED_G;
   DDRB = LED_G;
   block();
 }
 
+// Set red LED, float I/O, loop forever
 [[noreturn]]
 void fail() {
-  // Set red LED, disconnect data
   PORTB = LED_R;
   DDRB = LED_R;
   block();
@@ -174,6 +171,34 @@ void set_data() {
   }
 }
 
+[[noreturn]]
+void test() {
+  // Set green LED out of phase with red LED
+  PINB |= LED_G;
+
+  for (;;) {
+    // Write to all addresses
+    uint16_t address = 0;
+    do {
+      write(address);
+      ++address;
+    } while (address != 0);
+
+    // Toggle data pin
+    PINB |= DIN;
+
+    // Toggle green/red LEDs when data is high
+    if ((PORTB & DIN) == DIN) {
+      PINB |= LED_G;
+      PINB |= LED_R;
+    }
+  }
+}
+
+#else
+#error Must define I/O for current chip; see ifdef __AVR_ATmega328P__ above
+#endif
+
 // TODO take template param for tCAC delay cycles
 // TODO nested loops for 9-bit row/col (41128/41256)?
 template <Direction DIR, Read READ, Write WRITE>
@@ -204,30 +229,6 @@ template <Direction DIR, Write WRITE>
 void march() {
   // Default unpecified read to Rx
   march<DIR, Rx, WRITE>();
-}
-
-[[noreturn]]
-void test() {
-  // Set green LED out of phase with red LED
-  PINB |= LED_G;
-
-  for (;;) {
-    // Write to all addresses
-    uint16_t address = 0;
-    do {
-      write(address);
-      ++address;
-    } while (address != 0);
-
-    // Toggle data pin
-    PINB |= DIN;
-
-    // Toggle green/red LEDs when data is high
-    if ((PORTB & DIN) == DIN) {
-      PINB |= LED_G;
-      PINB |= LED_R;
-    }
-  }
 }
 
 int main() {
