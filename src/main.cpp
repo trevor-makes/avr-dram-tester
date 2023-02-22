@@ -84,6 +84,14 @@ constexpr uint8_t col(uint16_t address) {
   return address & 0xFF;
 }
 
+void config() {
+  // Configure output pins
+  DDRB = DIN | LED_G | LED_R; // outputs
+  PORTC = CTRL_DEFAULT; // pull-ups first
+  DDRC = CTRL_DEFAULT; // outputs, active-low
+  DDRD = 0xFF; // A0-A7 outputs
+}
+
 [[noreturn]]
 void block() {
   // Disconnect address and control
@@ -223,13 +231,7 @@ void test() {
 }
 
 int main() {
-  // Configure output pins
-  DDRB = DIN | LED_G | LED_R; // outputs
-  PORTC = CTRL_DEFAULT; // pull-ups first
-  DDRC = CTRL_DEFAULT; // outputs, active-low
-  DDRD = 0xFF; // A0-A7 outputs
-
-  //test();
+  config();
 
   // March C- algorithm
   march<UP, W0>();
