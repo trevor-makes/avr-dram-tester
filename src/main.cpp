@@ -76,11 +76,11 @@ void nop() {
 template <>
 inline void nop<0>() {}
 
-uint8_t row(uint16_t address) {
+constexpr uint8_t row(uint16_t address) {
   return address >> 8;
 }
 
-uint8_t col(uint16_t address) {
+constexpr uint8_t col(uint16_t address) {
   return address & 0xFF;
 }
 
@@ -145,18 +145,19 @@ void write(uint16_t address) {
   PORTC = CTRL_DEFAULT;
 }
 
-// TODO maybe pulse another bit in PORTD to measure refresh frequency
+// TODO maybe pulse another bit in PORTC to measure refresh frequency
 void refresh() {
   static uint8_t refresh_row = 0;
   // Strobe row address
   PORTD = refresh_row;
-  PORTC = CTRL_REFRESH; // pull RAS low
+  PORTC = CTRL_REFRESH;
   // Delay for tRAS > 200ns
   ++refresh_row; // LDS, SUBI, STS
   // Reset control signals
   PORTC = CTRL_DEFAULT;
 }
 
+// TODO take template param for tCAC delay cycles
 template <Direction DIR, Read READ, Write WRITE>
 void march() {
   // Data is same for all writes, so set Din outside of loop
