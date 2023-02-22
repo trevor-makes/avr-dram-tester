@@ -157,18 +157,23 @@ void refresh() {
   PORTC = CTRL_DEFAULT;
 }
 
-// TODO take template param for tCAC delay cycles
-template <Direction DIR, Read READ, Write WRITE>
-void march() {
-  // Data is same for all writes, so set Din outside of loop
+template <Write WRITE>
+void set_data() {
   if (WRITE == W0) {
     PORTB &= ~DIN; // set data 0
   } else { // W1, Wx
     PORTB |= DIN; // set data 1
   }
+}
+
+// TODO take template param for tCAC delay cycles
+// TODO nested loops for 9-bit row/col (41128/41256)?
+template <Direction DIR, Read READ, Write WRITE>
+void march() {
+  // Data is same for all writes, so set Din once outside loop
+  set_data<WRITE>();
 
   // Loop over full address range, up or down
-  // TODO nested for loops for 9-bit row/col (41128/41256)
   uint16_t address = 0;
   do {
     if (DIR == DN) --address;
