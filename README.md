@@ -6,7 +6,7 @@
 
 ## Assembling the circuit
 
-Arduino Nano pinout
+### Arduino Nano pinout
 ```
  Din-|B5 |USB| B4|-Grn LED
     -|   |___| B3|-Red LED
@@ -25,17 +25,17 @@ Arduino Nano pinout
     -|    ...  D1|-A1
 ```
 
-4164 pinout
+### 4164 pinout
 (41128/41256 add A8)
 ```
-  (A8)-|1 \/16|-GND
-   Din-|2   15|-CAS
-    WE-|3   14|-Dout
-   RAS-|4   13|-A6
-    A0-|5   12|-A3
-    A2-|6   11|-A4
-    A1-|7   10|-A5
-    5V-|8    9|-A7
+ (A8)-|1  \/ 16|-GND
+  Din-|2     15|-CAS
+   WE-|3     14|-Dout
+  RAS-|4     13|-A6
+   A0-|5     12|-A3
+   A2-|6     11|-A4
+   A1-|7     10|-A5
+   5V-|8      9|-A7
 ```
 
 NOTE only CAS and A0-A2 cross sides given above alignment
@@ -45,5 +45,7 @@ NOTE only CAS and A0-A2 cross sides given above alignment
 Use the [PlatformIO](https://platformio.org/) plugin for [VSCode](https://code.visualstudio.com/).
 
 Open the project folder with VSCode, select the environment for your board (`nano`, `oldnano`, `uno`), and click `Upload`.
+
+See [this video](https://www.youtube.com/watch?v=nlE2203Q3XI) for help building with PlatformIO.
 
 Distributed under the [MIT license](LICENSE.txt)
