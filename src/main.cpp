@@ -140,26 +140,34 @@ void set_data() {
 }
 
 [[noreturn]]
-void test() {
-  // Set green LED out of phase with red LED
-  PINB |= LED_G;
+void measure_rac() {
+  uint8_t address = 0;
 
-  for (;;) {
-    // Write to all addresses
-    uint16_t address = 0;
-    do {
-      write(address);
-      ++address;
-    } while (address != 0);
-
-    // Toggle data pin
+  // Write alternating bits along diagonal
+  do {
+    // Toggle data
     PINB |= DIN;
+    // Use same byte for row and col (diagonal)
+    PORTD = address;
+    PORTC = CTRL_WRITE_ROW;
+    PORTC = CTRL_WRITE_COL;
+    // Delay for CAS strobe width
+    ++address;
+    PORTC = CTRL_DEFAULT;
+  } while (address != 0);
 
-    // Toggle green/red LEDs when data is high
-    if ((PORTB & DIN) == DIN) {
-      PINB |= LED_G;
-      PINB |= LED_R;
-    }
+  // Read forever along diagonal
+  for (;;) {
+    // Use same byte for row and col (diagonal)
+    // This is the fastest we can toggle CAS after RAS, stressing row access time
+    PORTD = address;
+    PORTC = CTRL_READ_ROW;
+    PORTC = CTRL_READ_COL;
+    // Delay for read access time
+    // Probe RAS and DOUT with scope
+    delay<2>();
+    ++address;
+    PORTC = CTRL_DEFAULT;
   }
 }
 
@@ -201,6 +209,9 @@ void march() {
 
 int main() {
   config();
+
+  // TODO add switch to select test mode
+  //measure_rac();
 
   // March C- algorithm
   march<UP, W0>();
