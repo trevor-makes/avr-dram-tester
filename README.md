@@ -1,16 +1,16 @@
 # ATmega DRAM Tester
 
 - Uses standard March C- algorithm to fully test real-world DRAM faults
-- Stresses read access time to test for speed degradation
+- Read mode for measuring row access time
 - Only requires an Arduino Nano and a ZIF socket
 
 ## Assembling the circuit
 
 ### Arduino Nano pinout
 ```
- Din-|B5 |USB| B4|-Grn LED
-    -|   |___| B3|-Red LED
-    -|         B2|-
+ Din-|B5 |USB| B4|-Green LED+
+    -|   |___| B3|-Red LED+
+    -|         B2|-Mode Select
     -|C0       B1|-
     -|C1       B0|-Dout
     -|C2       D7|-A7
@@ -24,6 +24,11 @@
  GND-|GND ...  D0|-A0
     -|    ...  D1|-A1
 ```
+
+Mode Select:
+- SPST switch to GND
+- Open to select march C- test
+- Close to select access time measurement
 
 ### 4164 pinout
 (41128/41256 add A8)

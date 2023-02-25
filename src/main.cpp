@@ -31,6 +31,7 @@ constexpr uint8_t col(uint16_t address) {
 constexpr uint8_t DIN = 1 << 5; // output
 constexpr uint8_t LED_G = 1 << 4; // output
 constexpr uint8_t LED_R = 1 << 3; // output
+constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
 constexpr uint8_t DOUT = 1 << 0; // input
 
 // PORTC [ x x CAS RAS WE - - - ]
@@ -52,10 +53,15 @@ enum Write { W0, W1, Wx };
 
 // Configure output pins
 void config() {
+  PORTB = MODE_SEL; // input w/ pull-up
   DDRB = DIN | LED_G | LED_R; // outputs
   PORTC = CTRL_DEFAULT; // pull-ups first
   DDRC = CTRL_DEFAULT; // outputs, active-low
   DDRD = 0xFF; // A0-A7 outputs
+}
+
+bool is_measure_mode() {
+  return (PINB & MODE_SEL) == 0;
 }
 
 // Float address and control, loop forever
@@ -210,8 +216,10 @@ void march() {
 int main() {
   config();
 
-  // TODO add switch to select test mode
-  //measure_rac();
+  if (is_measure_mode()) {
+    // Loop forever
+    measure_rac();
+  }
 
   // March C- algorithm
   march<UP, W0>();
