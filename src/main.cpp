@@ -35,17 +35,18 @@ constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
 constexpr uint8_t DOUT = 1 << 0; // input
 
 // PORTC [ x x CAS RAS WE - - - ]
+constexpr uint8_t RE = 1 << 2; // output, active-low (test only, not used by DRAM)
 constexpr uint8_t WE = 1 << 3; // output, active-low
 constexpr uint8_t RAS = 1 << 4; // output, active-low
 constexpr uint8_t CAS = 1 << 5; // output, active-low
 
 // Active-low control signals on PORTC
-constexpr uint8_t CTRL_DEFAULT = WE | RAS | CAS; // all high
-constexpr uint8_t CTRL_REFRESH = WE | CAS; // pull RAS low
-constexpr uint8_t CTRL_READ_ROW = WE | CAS; // pull RAS low
-constexpr uint8_t CTRL_READ_COL = WE; // pull RAS and CAS low
-constexpr uint8_t CTRL_WRITE_ROW = CAS; // pull RAS and WE low
-constexpr uint8_t CTRL_WRITE_COL = 0; // pull RAS, CAS, WE low
+constexpr uint8_t CTRL_DEFAULT = RE | WE | RAS | CAS; // all high
+constexpr uint8_t CTRL_REFRESH = RE | WE | CAS; // pull RAS low
+constexpr uint8_t CTRL_READ_ROW = WE | CAS; // pull RAS and RE low
+constexpr uint8_t CTRL_READ_COL = WE; // pull RAS, RE, and CAS low
+constexpr uint8_t CTRL_WRITE_ROW = RE | CAS; // pull RAS and WE low
+constexpr uint8_t CTRL_WRITE_COL = RE; // pull RAS, CAS, and WE low
 
 enum Direction { UP, DN };
 enum Read { R0 = 0, R1 = DOUT, Rx };
