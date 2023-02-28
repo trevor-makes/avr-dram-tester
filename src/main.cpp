@@ -42,11 +42,11 @@ constexpr uint8_t CAS = 1 << 5; // output, active-low
 
 // Active-low control signals on PORTC
 constexpr uint8_t CTRL_DEFAULT = RE | WE | RAS | CAS; // all high
-constexpr uint8_t CTRL_REFRESH = RE | WE | CAS; // pull RAS low
-constexpr uint8_t CTRL_READ_ROW = WE | CAS; // pull RAS and RE low
-constexpr uint8_t CTRL_READ_COL = WE; // pull RAS, RE, and CAS low
-constexpr uint8_t CTRL_WRITE_ROW = RE | CAS; // pull RAS and WE low
-constexpr uint8_t CTRL_WRITE_COL = RE; // pull RAS, CAS, and WE low
+constexpr uint8_t CTRL_REFRESH = CTRL_DEFAULT & ~RAS; // pull RAS low
+constexpr uint8_t CTRL_READ_ROW = CTRL_DEFAULT & ~RAS & ~RE; // pull RAS and RE low
+constexpr uint8_t CTRL_READ_COL = CTRL_READ_ROW & ~CAS; // pull RAS, RE, and CAS low
+constexpr uint8_t CTRL_WRITE_ROW = CTRL_DEFAULT & ~RAS & ~WE; // pull RAS and WE low
+constexpr uint8_t CTRL_WRITE_COL = CTRL_WRITE_ROW & ~CAS; // pull RAS, CAS, and WE low
 
 enum Direction { UP, DN };
 enum Read { R0 = 0, R1 = DOUT, Rx };
