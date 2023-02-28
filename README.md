@@ -13,7 +13,7 @@
     -|         B2|-Mode Select
     -|C0       B1|-
     -|C1       B0|-Dout
-    -|C2       D7|-A7
+(RE)-|C2       D7|-A7
   WE-|C3       D6|-A6
  RAS-|C4       D5|-A5
  CAS-|C5       D4|-A4
@@ -24,6 +24,8 @@
  GND-|GND ...  D0|-A0
     -|    ...  D1|-A1
 ```
+
+RE isn't used by DRAM, but provides a test point for triggering a scope for read cycle measurement
 
 Mode Select:
 - SPST switch to GND

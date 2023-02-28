@@ -15,12 +15,13 @@ template <>
 inline void delay<0>() {}
 
 // Return high byte of address
-constexpr uint8_t row(uint16_t address) {
+constexpr uint8_t col(uint16_t address) {
   return address >> 8;
 }
 
 // Return low byte of address
-constexpr uint8_t col(uint16_t address) {
+  // NOTE using low byte ensures all rows accessed within refresh period
+constexpr uint8_t row(uint16_t address) {
   return address & 0xFF;
 }
 
@@ -34,7 +35,7 @@ constexpr uint8_t LED_R = 1 << 3; // output
 constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
 constexpr uint8_t DOUT = 1 << 0; // input
 
-// PORTC [ x x CAS RAS WE - - - ]
+// PORTC [ x x CAS RAS WE RE - - ]
 constexpr uint8_t RE = 1 << 2; // output, active-low (test only, not used by DRAM)
 constexpr uint8_t WE = 1 << 3; // output, active-low
 constexpr uint8_t RAS = 1 << 4; // output, active-low
@@ -42,7 +43,6 @@ constexpr uint8_t CAS = 1 << 5; // output, active-low
 
 // Active-low control signals on PORTC
 constexpr uint8_t CTRL_DEFAULT = RE | WE | RAS | CAS; // all high
-constexpr uint8_t CTRL_REFRESH = CTRL_DEFAULT & ~RAS; // pull RAS low
 constexpr uint8_t CTRL_READ_ROW = CTRL_DEFAULT & ~RAS & ~RE; // pull RAS and RE low
 constexpr uint8_t CTRL_READ_COL = CTRL_READ_ROW & ~CAS; // pull RAS, RE, and CAS low
 constexpr uint8_t CTRL_WRITE_ROW = CTRL_DEFAULT & ~RAS & ~WE; // pull RAS and WE low
@@ -125,18 +125,6 @@ void write(uint16_t address) {
   PORTC = CTRL_DEFAULT;
 }
 
-// TODO maybe pulse another bit in PORTC to measure refresh frequency
-void refresh() {
-  static uint8_t refresh_row = 0;
-  // Strobe row address
-  PORTD = refresh_row;
-  PORTC = CTRL_REFRESH;
-  // Delay for tRAS > 200ns
-  ++refresh_row; // LDS, SUBI, STS
-  // Reset control signals
-  PORTC = CTRL_DEFAULT;
-}
-
 template <Write WRITE>
 void set_data() {
   if (WRITE == W0) {
@@ -196,7 +184,6 @@ void march() {
 
     if (READ != Rx) read<READ>(address);
     if (WRITE != Wx) write(address);
-    refresh();
 
     if (DIR == UP) ++address;
   } while (address != 0);
