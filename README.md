@@ -11,12 +11,12 @@
  Din-|B5 |USB| B4|-Green LED+
     -|   |___| B3|-Red LED+
     -|         B2|-Mode Select
-    -|C0       B1|-
+    -|C0       B1|-Error
     -|C1       B0|-Dout
-(RE)-|C2       D7|-A7
-  WE-|C3       D6|-A6
- RAS-|C4       D5|-A5
- CAS-|C5       D4|-A4
+ /RE-|C2       D7|-A7
+ /WE-|C3       D6|-A6
+/RAS-|C4       D5|-A5
+/CAS-|C5       D4|-A4
     -|         D3|-A3
     -|         D2|-A2
   5V-|5V      GND|-GND
@@ -25,7 +25,7 @@
     -|    ...  D1|-A1
 ```
 
-RE isn't used by DRAM, but provides a test point for triggering a scope for read cycle measurement
+`RE` isn't used by DRAM, but provides a test point for triggering a scope on read cycles. Likewise, `Error` can be used for triggering a scope on error conditions.
 
 Mode Select:
 - SPST switch to GND
@@ -33,7 +33,6 @@ Mode Select:
 - Close to select access time measurement
 
 ### 4164 pinout
-(41128/41256 add A8)
 ```
  (A8)-|1  \/ 16|-GND
   Din-|2     15|-CAS
@@ -45,7 +44,9 @@ Mode Select:
    5V-|8      9|-A7
 ```
 
-NOTE only CAS and A0-A2 cross sides given above alignment
+41128 and 41256 DRAMs add `A8` (not currently supported)
+
+NOTE only `CAS` and `A0-A2` cross sides given above alignment
 
 ## Building the software
 

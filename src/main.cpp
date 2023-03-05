@@ -33,6 +33,7 @@ constexpr uint8_t DIN = 1 << 5; // output
 constexpr uint8_t LED_G = 1 << 4; // output
 constexpr uint8_t LED_R = 1 << 3; // output
 constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
+constexpr uint8_t ERROR = 1 << 1; // output
 constexpr uint8_t DOUT = 1 << 0; // input
 
 // PORTC [ x x CAS RAS WE RE - - ]
@@ -55,7 +56,7 @@ enum Write { W0, W1, Wx };
 // Configure output pins
 void config() {
   PORTB = MODE_SEL; // input w/ pull-up
-  DDRB = DIN | LED_G | LED_R; // outputs
+  DDRB = DIN | LED_G | LED_R | ERROR; // outputs
   PORTC = CTRL_DEFAULT; // pull-ups first
   DDRC = CTRL_DEFAULT; // outputs, active-low
   DDRD = 0xFF; // A0-A7 outputs
@@ -106,6 +107,7 @@ void read(uint16_t address) {
   if ((PINB & DOUT) != READ) {
     // Block forever with red LED
     // TODO jump/return for next attempt w/ longer delay
+    PORTB |= ERROR;
     fail();
   }
   // Reset control signals
@@ -162,6 +164,10 @@ void measure_rac() {
     // Probe RAS and DOUT with scope
     delay<2>();
     ++address;
+    if ((PINB & DOUT) != (address & 1)) {
+      PORTB |= ERROR;
+      PORTB &= ~ERROR;
+    }
     PORTC = CTRL_DEFAULT;
   }
 }
