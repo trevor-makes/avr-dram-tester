@@ -67,30 +67,18 @@ bool is_measure_mode() {
   return (PINB & MODE_SEL) == 0;
 }
 
-// Float address and control, loop forever
-[[noreturn]]
-void block() {
-  DDRC = 0;
-  PORTC = 0;
-  DDRD = 0;
-  PORTD = 0;
-  for (;;) {}
-}
-
-// Set green LED, float I/O, loop forever
-[[noreturn]]
 void pass() {
-  PORTB = LED_G;
-  DDRB = LED_G;
-  block();
+  // Set green LED only if red LED is clear
+  if ((PORTB & LED_R) == 0) PORTB |= LED_G;
 }
 
-// Set red LED, float I/O, loop forever
-[[noreturn]]
 void fail() {
-  PORTB = LED_R;
-  DDRB = LED_R;
-  block();
+  // Pulse error pin
+  PORTB |= ERROR;
+  PORTB &= ~ERROR;
+  // Set red LED, clear green LED
+  PORTB |= LED_R;
+  PORTB &= ~LED_G;
 }
 
 // Required startup procedure per DRAM datasheets
@@ -111,7 +99,7 @@ void init_dram() {
   }
 }
 
-// TODO take template param for tCAC delay cycles
+// Perform read cycle at `address` and validate Dout against `READ` parameter
 template <Read READ>
 void read(uint16_t address) {
   // Strobe row address
@@ -123,16 +111,12 @@ void read(uint16_t address) {
   // Delay 2 for tCAC > 120ns, +1 for AVR read latency
   delay<3>();
   // Validate data is expected value
-  if ((PINB & DOUT) != READ) {
-    // Block forever with red LED
-    // TODO jump/return for next attempt w/ longer delay
-    PORTB |= ERROR;
-    fail();
-  }
+  if ((PINB & DOUT) != READ) fail();
   // Reset control signals
   PORTC = CTRL_DEFAULT;
 }
 
+// Perform write cycle at `address`
 void write(uint16_t address) {
   // Strobe row address
   PORTD = row(address);
@@ -146,6 +130,7 @@ void write(uint16_t address) {
   PORTC = CTRL_DEFAULT;
 }
 
+// Set Din to `WRITE` parameter
 template <Write WRITE>
 void set_data() {
   if (WRITE == W0) {
@@ -183,10 +168,7 @@ void measure_rac() {
     // Probe RAS and DOUT with scope
     delay<2>();
     ++address;
-    if ((PINB & DOUT) != (address & 1)) {
-      PORTB |= ERROR;
-      PORTB &= ~ERROR;
-    }
+    if ((PINB & DOUT) != (address & 1)) fail();
     PORTC = CTRL_DEFAULT;
   }
 }
@@ -195,34 +177,33 @@ void measure_rac() {
 #error Must define I/O for current chip; see ifdef __AVR_ATmega328P__ above
 #endif
 
-// TODO take template param for tCAC delay cycles
-// TODO nested loops for 9-bit row/col (41128/41256)?
+// Perform one step of march algorithm
 template <Direction DIR, Read READ, Write WRITE>
 void march() {
   // Data is same for all writes, so set Din once outside loop
   set_data<WRITE>();
 
   // Loop over full address range, up or down
+  // Read then write (both optional) once at each address along the way
+  // TODO nested loops for 9-bit row/col (41128/41256)?
   uint16_t address = 0;
   do {
     if (DIR == DN) --address;
-
     if (READ != Rx) read<READ>(address);
     if (WRITE != Wx) write(address);
-
     if (DIR == UP) ++address;
   } while (address != 0);
 }
 
+// Default unpecified write to Wx
 template <Direction DIR, Read READ>
 void march() {
-  // Default unpecified write to Wx
   march<DIR, READ, Wx>();
 }
 
+// Default unpecified read to Rx
 template <Direction DIR, Write WRITE>
 void march() {
-  // Default unpecified read to Rx
   march<DIR, Rx, WRITE>();
 }
 
@@ -235,14 +216,15 @@ int main() {
     measure_rac();
   }
 
-  // March C- algorithm
-  march<UP, W0>();
-  march<UP, R0, W1>();
-  march<UP, R1, W0>();
-  march<DN, R0, W1>();
-  march<DN, R1, W0>();
-  march<DN, R0>();
-
-  // Block forever with green LED
-  pass();
+  // Run march C- algorithm in a loop
+  // LED turns green after first success, but stays red after first failure
+  for (;;) {
+    march<UP, W0>();
+    march<UP, R0, W1>();
+    march<UP, R1, W0>();
+    march<DN, R0, W1>();
+    march<DN, R1, W0>();
+    march<DN, R0>();
+    pass();
+  }
 }
