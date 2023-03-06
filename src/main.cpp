@@ -44,6 +44,7 @@ constexpr uint8_t CAS = 1 << 5; // output, active-low
 
 // Active-low control signals on PORTC
 constexpr uint8_t CTRL_DEFAULT = RE | WE | RAS | CAS; // all high
+constexpr uint8_t CTRL_REFRESH = CTRL_DEFAULT & ~RAS; // pull RAS low
 constexpr uint8_t CTRL_READ_ROW = CTRL_DEFAULT & ~RAS & ~RE; // pull RAS and RE low
 constexpr uint8_t CTRL_READ_COL = CTRL_READ_ROW & ~CAS; // pull RAS, RE, and CAS low
 constexpr uint8_t CTRL_WRITE_ROW = CTRL_DEFAULT & ~RAS & ~WE; // pull RAS and WE low
@@ -90,6 +91,24 @@ void fail() {
   PORTB = LED_R;
   DDRB = LED_R;
   block();
+}
+
+// Required startup procedure per DRAM datasheets
+void init_dram() {
+  // Delay 500us for bias generator
+  // Others only ask for 100us, but Intel specifies 500us!
+  // 250 * 32 * 62.5ns = 500us
+  OCR2A = 250; // count to 250
+  TCCR2A = 1 << WGM21; // CTC mode (count to OCR2A)
+  TCCR2B = 1 << CS21 | 1 << CS20; // set 32 prescaler (starts timer)
+  while ((TIFR2 & (1 << OCF2A)) == 0) {} // wait for timer
+
+  // 8 RAS cycle "wake-up" on any row
+  for (uint8_t i = 8; i != 0; --i) {
+    PORTC = CTRL_REFRESH;
+    delay<2>();
+    PORTC = CTRL_DEFAULT;
+  }
 }
 
 // TODO take template param for tCAC delay cycles
@@ -209,6 +228,7 @@ void march() {
 
 int main() {
   config();
+  init_dram();
 
   if (is_measure_mode()) {
     // Loop forever
