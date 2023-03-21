@@ -16,6 +16,8 @@ In either mode, the `Error` pin (Arduino pin D9) can be used for triggering a sc
 
 ## Assembling the circuit
 
+![](images/dram_circuit.png)
+
 ### Arduino Nano pinout
 ```
  Din-|PB5 |USB| PB4|-Green LED+
