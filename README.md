@@ -16,9 +16,9 @@ Disconnect power before inserting or removing chips for test.
 
 In memory test mode (see [Mode Select](#mode-select)), the full test takes around 1 second. If no errors are detected, the green LED will be set and the chip can be considered working. The test repeats in a loop and can be left running to catch intermittent errors. If an error is detected, the red LED will persist until reset even if subsequent tests pass. The Arduino's built-in LED can also be observed flashing (2 long and 1 short per test) as it shares the same pin as the data line.
 
-In access time measurement mode, an alternating pattern is written once and then read in a loop. If read errors are detected, the red LED will be set. The main purpose of the test is for triggering an oscilloscope from the `RAS` pin and measuring the delay until the `Dout` toggles.
+In access time measurement mode, an alternating pattern is written once and then read in a loop. If read errors are detected, the red LED will be set. The main purpose of the test is for triggering an oscilloscope from `RAS` (Arduino pin A4) and measuring the delay until `Dout` (Arduino pin D8) toggles.
 
-In either mode, the `Error` pin (Arduino pin D9) can be used for triggering a scope or logic analyzer at all points where an error is detected.
+In either mode, the `ERR` pin (Arduino pin A1) can be used for triggering a scope or logic analyzer at all points where an error is detected.
 
 ## Assembling the circuit
 
@@ -29,8 +29,8 @@ In either mode, the `Error` pin (Arduino pin D9) can be used for triggering a sc
  Din-|PB5 |USB| PB4|-Green LED+
     -|    |___| PB3|-Red LED+
     -|          PB2|-Mode Select
-    -|PC0       PB1|-Error
-    -|PC1       PB0|-Dout
+    -|PC0       PB1|-
+/ERR-|PC1       PB0|-Dout
  /RE-|PC2       PD7|-A7
  /WE-|PC3       PD6|-A6
 /RAS-|PC4       PD5|-A5
@@ -43,7 +43,7 @@ In either mode, the `Error` pin (Arduino pin D9) can be used for triggering a sc
     -|     ...  PD1|-A1
 ```
 
-`RE` isn't used by DRAM, but provides a test point for triggering a scope on read cycles. Likewise, `Error` can be used for triggering a scope on error conditions.
+`/RE` and `/ERR` aren't connected to DRAM, but provide test points for triggering a scope on read cycles and error conditions.
 
 #### Mode Select
 - SPST switch between `Mode Select` and `GND`

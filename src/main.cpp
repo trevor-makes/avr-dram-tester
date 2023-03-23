@@ -27,28 +27,29 @@ constexpr uint8_t row(uint16_t address) {
 
 #ifdef __AVR_ATmega328P__
 
-// PORTB [ x x DIN LED_G LED_R - - DOUT ]
+// PORTB [ x x DIN LED_G LED_R SEL - DOUT ]
 // NOTE Din is also built-in LED; each march pass blinks LED
 constexpr uint8_t DIN = 1 << 5; // output
 constexpr uint8_t LED_G = 1 << 4; // output
 constexpr uint8_t LED_R = 1 << 3; // output
 constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
-constexpr uint8_t ERROR = 1 << 1; // output
 constexpr uint8_t DOUT = 1 << 0; // input
 
-// PORTC [ x x CAS RAS WE RE - - ]
+// PORTC [ x x CAS RAS WE RE ERR - ]
+constexpr uint8_t ERR = 1 << 1; // output
 constexpr uint8_t RE = 1 << 2; // output, active-low (test only, not used by DRAM)
 constexpr uint8_t WE = 1 << 3; // output, active-low
 constexpr uint8_t RAS = 1 << 4; // output, active-low
 constexpr uint8_t CAS = 1 << 5; // output, active-low
 
 // Active-low control signals on PORTC
-constexpr uint8_t CTRL_DEFAULT = RE | WE | RAS | CAS; // all high
+constexpr uint8_t CTRL_DEFAULT = ERR | RE | WE | RAS | CAS; // all high
 constexpr uint8_t CTRL_REFRESH = CTRL_DEFAULT & ~RAS; // pull RAS low
 constexpr uint8_t CTRL_READ_ROW = CTRL_DEFAULT & ~RAS & ~RE; // pull RAS and RE low
 constexpr uint8_t CTRL_READ_COL = CTRL_READ_ROW & ~CAS; // pull RAS, RE, and CAS low
 constexpr uint8_t CTRL_WRITE_ROW = CTRL_DEFAULT & ~RAS & ~WE; // pull RAS and WE low
 constexpr uint8_t CTRL_WRITE_COL = CTRL_WRITE_ROW & ~CAS; // pull RAS, CAS, and WE low
+constexpr uint8_t CTRL_ERROR = CTRL_DEFAULT & ~ERR; // pull ERR low
 
 enum Direction { UP, DN };
 enum Read { R0 = 0, R1 = DOUT, Rx };
@@ -57,7 +58,7 @@ enum Write { W0, W1, Wx };
 // Configure output pins
 void config() {
   PORTB = MODE_SEL; // input w/ pull-up
-  DDRB = DIN | LED_G | LED_R | ERROR; // outputs
+  DDRB = DIN | LED_G | LED_R; // outputs
   PORTC = CTRL_DEFAULT; // pull-ups first
   DDRC = CTRL_DEFAULT; // outputs, active-low
   DDRD = 0xFF; // A0-A7 outputs
@@ -74,8 +75,7 @@ void pass() {
 
 void fail() {
   // Pulse error pin
-  PORTB |= ERROR;
-  PORTB &= ~ERROR;
+  PORTC = CTRL_ERROR;
   // Set red LED, clear green LED
   PORTB |= LED_R;
   PORTB &= ~LED_G;
