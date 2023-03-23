@@ -14,17 +14,6 @@ void delay() {
 template <>
 inline void delay<0>() {}
 
-// Return high byte of address
-constexpr uint8_t col(uint16_t address) {
-  return address >> 8;
-}
-
-// Return low byte of address
-  // NOTE using low byte ensures all rows accessed within refresh period
-constexpr uint8_t row(uint16_t address) {
-  return address & 0xFF;
-}
-
 #ifdef __AVR_ATmega328P__
 
 // PORTB [ x x DIN LED_G LED_R SEL - DOUT ]
@@ -102,12 +91,12 @@ void init_dram() {
 
 // Perform read cycle at `address` and validate Dout against `READ` parameter
 template <Read READ>
-void read(uint16_t address) {
+void read(uint8_t row, uint8_t col) {
   // Strobe row address
-  PORTD = row(address);
+  PORTD = row;
   PORTC = CTRL_READ_ROW;
   // Strobe col address
-  PORTD = col(address);
+  PORTD = col;
   PORTC = CTRL_READ_COL;
   // Delay 2 for tCAC > 120ns, +1 for AVR read latency
   delay<3>();
@@ -118,12 +107,12 @@ void read(uint16_t address) {
 }
 
 // Perform write cycle at `address`
-void write(uint16_t address) {
+void write(uint8_t row, uint8_t col) {
   // Strobe row address
-  PORTD = row(address);
+  PORTD = row;
   PORTC = CTRL_WRITE_ROW;
   // Strobe col address
-  PORTD = col(address);
+  PORTD = col;
   PORTC = CTRL_WRITE_COL;
   // Delay for tCAS > 120 (OUT + NOP)
   delay();
@@ -189,9 +178,12 @@ void march() {
   // TODO nested loops for 9-bit row/col (41128/41256)?
   uint16_t address = 0;
   do {
+    // NOTE use the lower byte as the row so a refresh is done at each step
+    const uint8_t row = address & 0xFF;
+    const uint8_t col = address >> 8;
     if (DIR == DN) --address;
-    if (READ != Rx) read<READ>(address);
-    if (WRITE != Wx) write(address);
+    if (READ != Rx) read<READ>(row, col);
+    if (WRITE != Wx) write(row, col);
     if (DIR == UP) ++address;
   } while (address != 0);
 }
