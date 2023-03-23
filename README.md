@@ -29,7 +29,7 @@ In either mode, the `ERR` pin (Arduino pin A1) can be used for triggering a scop
  Din-|PB5 |USB| PB4|-Green LED+
     -|    |___| PB3|-Red LED+
     -|          PB2|-Mode Select
-    -|PC0       PB1|-
+    -|PC0       PB1|-A8
 /ERR-|PC1       PB0|-Dout
  /RE-|PC2       PD7|-A7
  /WE-|PC3       PD6|-A6
@@ -50,9 +50,9 @@ In either mode, the `ERR` pin (Arduino pin A1) can be used for triggering a scop
 - Set open to select march C- test
 - Set closed to select access time measurement
 
-### 4164 pinout
+### 4164/41256 pinout
 ```
- (A8)-|1  \/ 16|-GND
+   A8-|1  \/ 16|-GND
   Din-|2     15|-CAS
    WE-|3     14|-Dout
   RAS-|4     13|-A6
@@ -61,10 +61,6 @@ In either mode, the `ERR` pin (Arduino pin A1) can be used for triggering a scop
    A1-|7     10|-A5
    5V-|8      9|-A7
 ```
-
-41128 and 41256 DRAMs add `A8` (not currently supported)
-
-NOTE only `CAS` and `A0-A2` cross the center line if the Nano and 4164 are aligned as above. This simplifies the layout on a breadboard or protoboard.
 
 ## Building the software
 

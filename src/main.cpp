@@ -33,6 +33,7 @@ constexpr uint8_t DIN = 1 << 5; // output
 constexpr uint8_t LED_G = 1 << 4; // output
 constexpr uint8_t LED_R = 1 << 3; // output
 constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
+constexpr uint8_t A8 = 1 << 1; // output
 constexpr uint8_t DOUT = 1 << 0; // input
 
 // PORTC [ x x CAS RAS WE RE ERR - ]
@@ -58,7 +59,7 @@ enum Write { W0, W1, Wx };
 // Configure output pins
 void config() {
   PORTB = MODE_SEL; // input w/ pull-up
-  DDRB = DIN | LED_G | LED_R; // outputs
+  DDRB = DIN | LED_G | LED_R | A8; // outputs
   PORTC = CTRL_DEFAULT; // pull-ups first
   DDRC = CTRL_DEFAULT; // outputs, active-low
   DDRD = 0xFF; // A0-A7 outputs
