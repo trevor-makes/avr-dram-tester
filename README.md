@@ -4,6 +4,12 @@
 - Read mode for measuring row access time
 - Only requires an Arduino Nano and a ZIF socket
 
+Watch [this video](https://www.youtube.com/watch?v=NkVNLflDXrE) to learn about DRAM testing.
+
+![](images/breadboard.jpg)
+
+![](images/protoboard.jpg)
+
 ## Using the tester
 
 Disconnect power before inserting or removing chips for test.
