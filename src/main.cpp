@@ -42,8 +42,9 @@ constexpr uint8_t CTRL_WRITE_COL = CTRL_WRITE_ROW & ~CAS; // pull RAS, CAS, and 
 constexpr uint8_t CTRL_ERROR = CTRL_DEFAULT & ~ERR; // pull ERR low
 
 enum Direction { UP, DN };
-enum Read { R0 = 0, R1 = DOUT, Rx };
-enum Write { W0, W1, Wx };
+enum Read { R0 = 0, R1 = DOUT, RX };
+enum Write { W0, W1, WX };
+enum Bit { Bit0, Bit1, BitX };
 
 // Configure output pins
 void config() {
@@ -89,14 +90,26 @@ void init_dram() {
   }
 }
 
+// Set upper address bit
+template <Bit BIT>
+void set_a8() {
+  if (BIT == Bit0) {
+    PORTB &= ~A8;
+  } else if (BIT == Bit1) {
+    PORTB |= A8;
+  }
+}
+
 // Perform read cycle at `address` and validate Dout against `READ` parameter
-template <Read READ>
+template <Read READ, Bit ROW_A8 = BitX, Bit COL_A8 = BitX>
 void read(uint8_t row, uint8_t col) {
   // Strobe row address
   PORTD = row;
+  set_a8<ROW_A8>();
   PORTC = CTRL_READ_ROW;
   // Strobe col address
   PORTD = col;
+  set_a8<COL_A8>();
   PORTC = CTRL_READ_COL;
   // Delay 2 for tCAC > 120ns, +1 for AVR read latency
   delay<3>();
@@ -107,12 +120,15 @@ void read(uint8_t row, uint8_t col) {
 }
 
 // Perform write cycle at `address`
+template <Bit ROW_A8 = BitX, Bit COL_A8 = BitX>
 void write(uint8_t row, uint8_t col) {
   // Strobe row address
   PORTD = row;
+  set_a8<ROW_A8>();
   PORTC = CTRL_WRITE_ROW;
   // Strobe col address
   PORTD = col;
+  set_a8<COL_A8>();
   PORTC = CTRL_WRITE_COL;
   // Delay for tCAS > 120 (OUT + NOP)
   delay();
@@ -125,7 +141,7 @@ template <Write WRITE>
 void set_data() {
   if (WRITE == W0) {
     PORTB &= ~DIN; // set data 0
-  } else { // W1, Wx
+  } else { // W1, WX
     PORTB |= DIN; // set data 1
   }
 }
@@ -182,22 +198,22 @@ void march() {
     const uint8_t row = address & 0xFF;
     const uint8_t col = address >> 8;
     if (DIR == DN) --address;
-    if (READ != Rx) read<READ>(row, col);
-    if (WRITE != Wx) write(row, col);
+    if (READ != RX) read<READ>(row, col);
+    if (WRITE != WX) write(row, col);
     if (DIR == UP) ++address;
   } while (address != 0);
 }
 
-// Default unpecified write to Wx
+// Default unpecified write to WX
 template <Direction DIR, Read READ>
 void march() {
-  march<DIR, READ, Wx>();
+  march<DIR, READ, WX>();
 }
 
-// Default unpecified read to Rx
+// Default unpecified read to RX
 template <Direction DIR, Write WRITE>
 void march() {
-  march<DIR, Rx, WRITE>();
+  march<DIR, RX, WRITE>();
 }
 
 int main() {
