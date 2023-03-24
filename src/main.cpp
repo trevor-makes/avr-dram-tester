@@ -192,13 +192,12 @@ void march() {
 
   // Loop over full address range, up or down
   // Read then write (both optional) once at each address along the way
-  // TODO nested loops for 9-bit row/col (41128/41256)?
+  // NOTE use the lower byte as the row so a refresh is done at each step
   uint16_t address = 0;
   do {
-    // NOTE use the lower byte as the row so a refresh is done at each step
+    if (DIR == DN) --address;
     const uint8_t row = address & 0xFF;
     const uint8_t col = address >> 8;
-    if (DIR == DN) --address;
     if (READ != RX && read(row, col) != READ) fail();
     if (WRITE != WX) write(row, col);
     if (DIR == UP) ++address;
