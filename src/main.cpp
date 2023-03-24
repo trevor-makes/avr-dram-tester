@@ -186,7 +186,7 @@ void measure_rac() {
 
 // Perform one step of march algorithm
 template <Direction DIR, Read READ, Write WRITE>
-void march() {
+void march_step() {
   // Data is same for all writes, so set Din once outside loop
   set_data<WRITE>();
 
@@ -206,14 +206,28 @@ void march() {
 
 // Default unpecified write to WX
 template <Direction DIR, Read READ>
-void march() {
-  march<DIR, READ, WX>();
+void march_step() {
+  march_step<DIR, READ, WX>();
 }
 
 // Default unpecified read to RX
 template <Direction DIR, Write WRITE>
+void march_step() {
+  march_step<DIR, RX, WRITE>();
+}
+
+// Run march C- algorithm in a loop
+// LED turns green after first success, but stays red after first failure
 void march() {
-  march<DIR, RX, WRITE>();
+  for (;;) {
+    march_step<UP, W0>();
+    march_step<UP, R0, W1>();
+    march_step<UP, R1, W0>();
+    march_step<DN, R0, W1>();
+    march_step<DN, R1, W0>();
+    march_step<DN, R0>();
+    pass();
+  }
 }
 
 int main() {
@@ -225,15 +239,5 @@ int main() {
     measure_rac();
   }
 
-  // Run march C- algorithm in a loop
-  // LED turns green after first success, but stays red after first failure
-  for (;;) {
-    march<UP, W0>();
-    march<UP, R0, W1>();
-    march<UP, R1, W0>();
-    march<DN, R0, W1>();
-    march<DN, R1, W0>();
-    march<DN, R0>();
-    pass();
-  }
+  march();
 }
