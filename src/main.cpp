@@ -192,16 +192,19 @@ void march() {
 
   // Loop over full address range, up or down
   // Read then write (both optional) once at each address along the way
-  // NOTE use the lower byte as the row so a refresh is done at each step
-  uint16_t address = 0;
+  uint8_t row = 0;
+  uint8_t col = 0;
   do {
-    if (DIR == DN) --address;
-    const uint8_t row = address & 0xFF;
-    const uint8_t col = address >> 8;
-    if (READ != RX && read(row, col) != READ) fail();
-    if (WRITE != WX) write(row, col);
-    if (DIR == UP) ++address;
-  } while (address != 0);
+    if (DIR == DN) --col;
+    do {
+      // Iterate row in inner loop so row refresh is done each step
+      if (DIR == DN) --row;
+      if (READ != RX && read(row, col) != READ) fail();
+      if (WRITE != WX) write(row, col);
+      if (DIR == UP) ++row;
+    } while (row != 0);
+    if (DIR == UP) ++col;
+  } while (col != 0);
 }
 
 // Default unpecified write to WX
