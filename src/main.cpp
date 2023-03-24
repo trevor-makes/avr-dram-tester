@@ -100,9 +100,9 @@ void set_a8() {
   }
 }
 
-// Perform read cycle at `address` and validate Dout against `READ` parameter
-template <Read READ, Bit ROW_A8 = BitX, Bit COL_A8 = BitX>
-void read(uint8_t row, uint8_t col) {
+// Perform read cycle at `address`
+template <Bit ROW_A8 = BitX, Bit COL_A8 = BitX>
+Read read(uint8_t row, uint8_t col) {
   // Strobe row address
   PORTD = row;
   set_a8<ROW_A8>();
@@ -114,9 +114,10 @@ void read(uint8_t row, uint8_t col) {
   // Delay 2 for tCAC > 120ns, +1 for AVR read latency
   delay<3>();
   // Validate data is expected value
-  if ((PINB & DOUT) != READ) fail();
+  Read result = Read(PINB & DOUT);
   // Reset control signals
   PORTC = CTRL_DEFAULT;
+  return result;
 }
 
 // Perform write cycle at `address`
@@ -198,7 +199,7 @@ void march() {
     const uint8_t row = address & 0xFF;
     const uint8_t col = address >> 8;
     if (DIR == DN) --address;
-    if (READ != RX) read<READ>(row, col);
+    if (READ != RX && read(row, col) != READ) fail();
     if (WRITE != WX) write(row, col);
     if (DIR == UP) ++address;
   } while (address != 0);
