@@ -45,6 +45,7 @@ enum Direction { UP, DN };
 enum Read { R0 = 0, R1 = DOUT, RX };
 enum Write { W0, W1, WX };
 enum Bit { Bit0, Bit1, BitX };
+enum Chip { DRAM_4164, DRAM_41256 };
 
 // Configure output pins
 void config() {
@@ -147,6 +148,18 @@ void set_data() {
   }
 }
 
+// Detect 41256 by writing and reading at different values of A8
+bool is_41256() {
+  // Write 1 to lower bank
+  set_data<W1>();
+  write<Bit0, Bit0>(0, 0);
+  // Write 0 to upper bank
+  set_data<W0>();
+  write<Bit1, Bit1>(0, 0);
+  // If lower bank still reads 1, it's a 256
+  return read<Bit0, Bit0>(0, 0) == R1;
+}
+
 [[noreturn]]
 void measure_rac() {
   uint8_t address = 0;
@@ -184,48 +197,70 @@ void measure_rac() {
 #error Must define I/O for current chip; see ifdef __AVR_ATmega328P__ above
 #endif
 
-// Perform one step of march algorithm
-template <Direction DIR, Read READ, Write WRITE>
-void march_step() {
-  // Data is same for all writes, so set Din once outside loop
-  set_data<WRITE>();
-
-  // Loop over full address range, up or down
-  // Read then write (both optional) once at each address along the way
-  // NOTE use the lower byte as the row so a refresh is done at each step
+// Loop over the 8-bit x 8-bit address range, up or down
+// Read then write (both optional) once at each address along the way
+// NOTE use the lower byte as the row so a refresh is done at each step
+template <Direction DIR, Read READ, Write WRITE, Bit ROW_A8 = BitX, Bit COL_A8 = BitX>
+void march_once() {
   uint16_t address = 0;
   do {
     if (DIR == DN) --address;
     const uint8_t col = address >> 8;
     const uint8_t row = address & 0xFF;
-    if (READ != RX && read(row, col) != READ) fail();
-    if (WRITE != WX) write(row, col);
+    if (READ != RX && read<ROW_A8, COL_A8>(row, col) != READ) fail();
+    if (WRITE != WX) write<ROW_A8, COL_A8>(row, col);
     if (DIR == UP) ++address;
   } while (address != 0);
 }
 
-// Default unpecified write to WX
-template <Direction DIR, Read READ>
+// Perform one step of march algorithm
+template <Chip CHIP, Direction DIR, Read READ, Write WRITE>
 void march_step() {
-  march_step<DIR, READ, WX>();
+  // Data is same for all writes, so set Din once outside loop
+  set_data<WRITE>();
+
+  if (CHIP == DRAM_41256) {
+    if (DIR == UP) {
+      // Increment A8 bits
+      march_once<UP, READ, WRITE, Bit0, Bit0>();
+      march_once<UP, READ, WRITE, Bit1, Bit0>();
+      march_once<UP, READ, WRITE, Bit0, Bit1>();
+      march_once<UP, READ, WRITE, Bit1, Bit1>();
+    } else {
+      // Decrement A8 bits
+      march_once<DN, READ, WRITE, Bit1, Bit1>();
+      march_once<DN, READ, WRITE, Bit0, Bit1>();
+      march_once<DN, READ, WRITE, Bit1, Bit0>();
+      march_once<DN, READ, WRITE, Bit0, Bit0>();
+    }
+  } else {
+    march_once<DIR, READ, WRITE>();
+  }
+}
+
+// Default unpecified write to WX
+template <Chip CHIP, Direction DIR, Read READ>
+void march_step() {
+  march_step<CHIP, DIR, READ, WX>();
 }
 
 // Default unpecified read to RX
-template <Direction DIR, Write WRITE>
+template <Chip CHIP, Direction DIR, Write WRITE>
 void march_step() {
-  march_step<DIR, RX, WRITE>();
+  march_step<CHIP, DIR, RX, WRITE>();
 }
 
 // Run march C- algorithm in a loop
 // LED turns green after first success, but stays red after first failure
+template <Chip CHIP>
 void march() {
   for (;;) {
-    march_step<UP, W0>();
-    march_step<UP, R0, W1>();
-    march_step<UP, R1, W0>();
-    march_step<DN, R0, W1>();
-    march_step<DN, R1, W0>();
-    march_step<DN, R0>();
+    march_step<CHIP, UP, W0>();
+    march_step<CHIP, UP, R0, W1>();
+    march_step<CHIP, UP, R1, W0>();
+    march_step<CHIP, DN, R0, W1>();
+    march_step<CHIP, DN, R1, W0>();
+    march_step<CHIP, DN, R0>();
     pass();
   }
 }
@@ -239,5 +274,9 @@ int main() {
     measure_rac();
   }
 
-  march();
+  if (is_41256()) {
+    march<DRAM_41256>();
+  } else {
+    march<DRAM_4164>();
+  }
 }
