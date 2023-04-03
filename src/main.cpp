@@ -1,36 +1,27 @@
 // Copyright (c) 2023 Trevor Makes
 
+#include "util.hpp"
+
 #include <avr/io.h>
 #include <stdint.h>
-
-// Insert N cycle delay
-template <uint8_t N = 1>
-void delay() {
-  __asm__ __volatile__ ("nop");
-  delay<N - 1>();
-}
-
-// Base case of recursive template
-template <>
-inline void delay<0>() {}
 
 #ifdef __AVR_ATmega328P__
 
 // PORTB [ x x DIN LED_G LED_R SEL - DOUT ]
 // NOTE Din is also built-in LED; each march pass blinks LED
-constexpr uint8_t DIN = 1 << 5; // output
-constexpr uint8_t LED_G = 1 << 4; // output
-constexpr uint8_t LED_R = 1 << 3; // output
-constexpr uint8_t MODE_SEL = 1 << 2; // input, pullups
-constexpr uint8_t A8 = 1 << 1; // output
-constexpr uint8_t DOUT = 1 << 0; // input
+constexpr uint8_t DIN = bit_mask(5); // output
+constexpr uint8_t LED_G = bit_mask(4); // output
+constexpr uint8_t LED_R = bit_mask(3); // output
+constexpr uint8_t MODE_SEL = bit_mask(2); // input, pullups
+constexpr uint8_t A8 = bit_mask(1); // output
+constexpr uint8_t DOUT = bit_mask(0); // input
 
 // PORTC [ x x CAS RAS WE RE ERR - ]
-constexpr uint8_t ERR = 1 << 1; // output
-constexpr uint8_t RE = 1 << 2; // output, active-low (test only, not used by DRAM)
-constexpr uint8_t WE = 1 << 3; // output, active-low
-constexpr uint8_t RAS = 1 << 4; // output, active-low
-constexpr uint8_t CAS = 1 << 5; // output, active-low
+constexpr uint8_t ERR = bit_mask(1); // output
+constexpr uint8_t RE = bit_mask(2); // output, active-low (test only, not used by DRAM)
+constexpr uint8_t WE = bit_mask(3); // output, active-low
+constexpr uint8_t RAS = bit_mask(4); // output, active-low
+constexpr uint8_t CAS = bit_mask(5); // output, active-low
 
 // Active-low control signals on PORTC
 constexpr uint8_t CTRL_DEFAULT = ERR | RE | WE | RAS | CAS; // all high
@@ -79,14 +70,14 @@ void init_dram() {
   // Others only ask for 100us, but Intel specifies 500us!
   // 250 * 32 * 62.5ns = 500us
   OCR2A = 250; // count to 250
-  TCCR2A = 1 << WGM21; // CTC mode (count to OCR2A)
-  TCCR2B = 1 << CS21 | 1 << CS20; // set 32 prescaler (starts timer)
-  while ((TIFR2 & (1 << OCF2A)) == 0) {} // wait for timer
+  TCCR2A = bit_mask(WGM21); // CTC mode (count to OCR2A)
+  TCCR2B = bit_mask(CS21, CS20); // set 32 prescaler (starts timer)
+  while ((TIFR2 & bit_mask(OCF2A)) == 0) {} // wait for timer
 
   // 8 RAS cycle "wake-up" on any row
   for (uint8_t i = 8; i != 0; --i) {
     PORTC = CTRL_REFRESH;
-    delay<2>();
+    delay_cycles<2>();
     PORTC = CTRL_DEFAULT;
   }
 }
@@ -113,7 +104,7 @@ Read read(uint8_t row, uint8_t col) {
   set_a8<COL_A8>();
   PORTC = CTRL_READ_COL;
   // Delay 2 for tCAC > 120ns, +1 for AVR read latency
-  delay<3>();
+  delay_cycles<3>();
   // Validate data is expected value
   Read result = Read(PINB & DOUT);
   // Reset control signals
@@ -133,7 +124,7 @@ void write(uint8_t row, uint8_t col) {
   set_a8<COL_A8>();
   PORTC = CTRL_WRITE_COL;
   // Delay for tCAS > 120 (OUT + NOP)
-  delay();
+  delay_cycles();
   // Reset control signals
   PORTC = CTRL_DEFAULT;
 }
@@ -186,7 +177,7 @@ void measure_rac() {
     PORTC = CTRL_READ_COL;
     // Delay for read access time
     // Probe RAS and DOUT with scope
-    delay<2>();
+    delay_cycles<2>();
     ++address;
     if ((PINB & DOUT) != (address & 1)) fail();
     PORTC = CTRL_DEFAULT;
