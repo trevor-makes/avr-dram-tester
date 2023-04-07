@@ -169,6 +169,8 @@ void measure_rac() {
   } while (address != 0);
 
   // Read forever along diagonal
+  uint8_t blinks = 0;
+  uint16_t phase = 0;
   for (;;) {
     // Use same byte for row and col (diagonal)
     // This is the fastest we can toggle CAS after RAS, stressing row access time
@@ -181,6 +183,18 @@ void measure_rac() {
     ++address;
     if ((PINB & DOUT) != (address & 1)) fail();
     PORTC = CTRL_DEFAULT;
+
+    // Blink green LED between passes
+    if (address == 0) {
+      if ((phase & 0xFF) == 0) {
+        if ((phase >> 8 & 0x03) == 0 && (phase >> 10 & 0x03) < blinks) {
+          PORTB |= LED_G;
+        } else if ((phase >> 8 & 0x03) == 0x02) {
+          PORTB &= ~LED_G;
+        }
+      }
+      ++phase;
+    }
   }
 }
 
