@@ -169,9 +169,14 @@ void measure_rac() {
   } while (address != 0);
 
   // Read forever along diagonal
-  uint8_t blinks = 0;
+  uint8_t blinks = 2;
   uint16_t phase = 0;
   for (;;) {
+    // Toggle input capture edge and reset flag
+    TCCR1B ^= bit_mask(ICES1);
+    TIFR1 |= bit_mask(ICF1);
+    // Start input capture timer
+    TCCR1B |= bit_mask(CS10);
     // Use same byte for row and col (diagonal)
     // This is the fastest we can toggle CAS after RAS, stressing row access time
     PORTD = address;
@@ -181,8 +186,25 @@ void measure_rac() {
     // Probe RAS and DOUT with scope
     delay_cycles<2>();
     ++address;
-    if ((PINB & DOUT) != (address & 1)) fail();
+    // Test input capture flag
+    if ((TIFR1 & bit_mask(ICF1)) != 0) {
+      // All chips tested at 5 counts, so use this as median
+      // Faster chips get 1 blink, slower chips get 3 blinks
+      // TODO clean this up, account for CPU clock rate
+      uint8_t count = ICR1L;
+      if (count > 5) {
+        blinks = 3;
+      } else if (count < 5) {
+        blinks = 1;
+      }
+      TIFR1 |= bit_mask(ICF1);
+    } else {
+      fail();
+    }
     PORTC = CTRL_DEFAULT;
+    // Stop input capture timer
+    TCCR1B &= ~bit_mask(CS10);
+    TCNT1 = 0;
 
     // Blink green LED between passes
     if (address == 0) {
