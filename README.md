@@ -15,7 +15,7 @@ Watch [this video](https://www.youtube.com/watch?v=NkVNLflDXrE) to learn about D
 
 Disconnect power before inserting or removing chips for test.
 
-In memory test mode (see [Mode Select](#mode-select)), the DRAM type is detected automatically. The full test takes around 1 second for 4164 and 8 seconds for 41256. If no errors are detected, the green LED will be set and the chip can be considered working. The test repeats in a loop and can be left running to catch intermittent errors. If an error is detected, the red LED will persist until reset even if subsequent tests pass. The Arduino's built-in LED can also be observed flashing (2 long and 1 short per test) as it shares the same pin as the data line.
+In memory test mode (see [Mode Select](#mode-select)), the DRAM type is detected automatically. The full test takes 1.3 seconds for 4164 and 7.5 seconds for 41256. If no errors are detected, the green LED will be set and the chip can be considered working. The test repeats in a loop and can be left running to catch intermittent errors. If an error is detected, the red LED will persist until reset even if subsequent tests pass. The Arduino's built-in LED can also be observed flashing (2 long and 1 short per test) as it shares the same pin as the data line.
 
 In access time measurement mode, an alternating pattern is written once and then read in a loop. If read errors are detected, the red LED will be set. The main purpose of the test is for triggering an oscilloscope from `RAS` (Arduino pin A4) and measuring the delay until `Dout` (Arduino pin D8) toggles.
 

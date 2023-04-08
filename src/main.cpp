@@ -229,15 +229,21 @@ void measure_rac() {
 // NOTE use the lower byte as the row so a refresh is done at each step
 template <Direction DIR, Read READ, Write WRITE, Bit ROW_A8 = BitX, Bit COL_A8 = BitX>
 void march_once() {
-  uint16_t address = 0;
-  do {
-    if (DIR == DN) --address;
-    const uint8_t col = address >> 8;
-    const uint8_t row = address & 0xFF;
-    if (READ != RX && read<ROW_A8, COL_A8>(row, col) != READ) fail();
-    if (WRITE != WX) write<ROW_A8, COL_A8>(row, col);
-    if (DIR == UP) ++address;
-  } while (address != 0);
+  if (ROW_A8 == COL_A8 && ROW_A8 != BitX) {
+    // Optimization for non-changing A8 value
+    set_a8<ROW_A8>();
+    march_once<DIR, READ, WRITE>();
+  } else {
+    uint16_t address = 0;
+    do {
+      if (DIR == DN) --address;
+      const uint8_t col = address >> 8;
+      const uint8_t row = address & 0xFF;
+      if (READ != RX && read<ROW_A8, COL_A8>(row, col) != READ) fail();
+      if (WRITE != WX) write<ROW_A8, COL_A8>(row, col);
+      if (DIR == UP) ++address;
+    } while (address != 0);
+  }
 }
 
 // Perform one step of march algorithm
